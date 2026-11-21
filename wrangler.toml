@@ -1,0 +1,12 @@
+# ==============================================================================
+# CLOUDFLARE PAGES / WORKERS CONFIGURATION FOR LIVEHUB
+# Deploy Next.js to Cloudflare at $0 Server Maintenance Cost
+# ==============================================================================
+name = "livehub-creator-platform"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+# Environment Variables configured in Cloudflare Dashboard:
+# [vars]
+# NEXT_PUBLIC_APP_URL = "https://your-livehub.pages.dev"

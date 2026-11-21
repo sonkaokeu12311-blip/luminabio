@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  CREATOR
+  ADMIN
+}
+
+enum BackgroundType {
+  COLOR
+  GRADIENT
+  IMAGE
+  VIDEO
+  PARTICLES
+}
+
+enum LivePlatform {
+  NONE
+  YOUTUBE
+  TWITCH
+}
+
+enum WidgetType {
+  SOCIAL
+  LIVE_STREAM
+  AUDIO_TRACK
+  TIP_JAR
+  RICH_MEDIA
+  CUSTOM_LINK
+  DISCORD
+}
+
+enum OAuthProvider {
+  YOUTUBE
+  TWITCH
+  DISCORD
+  GOOGLE
+}
+
+enum AnalyticsEventType {
+  VIEW
+  CLICK
+  LIVE_IMPRESSION
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  username         String            @unique
+  passwordHash     String?
+  role             Role              @default(CREATOR)
+  profile          Profile?
+  oauthConnections OAuthConnection[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([username])
+}
+
+model Profile {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName       String
+  bio               String?           @db.Text
+  avatarUrl         String?
+  backgroundType    BackgroundType    @default(GRADIENT)
+  backgroundUrl     String?           // Video MP4/WebM or Image
+  particleEffect    String?           // "snow" | "embers" | "matrix" | "stars"
+  audioUrl          String?           // Background music URL
+  audioTitle        String?           // Audio title & artist
+  customCss         String?           @db.Text
+  accentColor       String            @default("#6366f1")
+  cursorEffect      String?           @default("default")
+  
+  // Real-time Livestream State
+  isLive            Boolean           @default(false)
+  livePlatform      LivePlatform      @default(NONE)
+  liveDataJson      Json?             // { streamId, title, viewerCount, thumbnailUrl, gameName, startedAt }
+  lastLiveCheckedAt DateTime?
+
+  // SePay Banking Configuration for Tip/Donations
+  sepayBank         String?           @default("MBBank")
+  sepayAccountNumber String?
+  sepayAccountName  String?
+
+  widgets           BentoWidget[]
+  analyticsEvents   AnalyticsEvent[]
+  donations         DonationTransaction[]
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([isLive, livePlatform])
+}
+
+model BentoWidget {
+  id              String           @id @default(cuid())
+  profileId       String
+  profile         Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type            WidgetType
+  title           String
+  url             String?
+  gridSpanX       Int              @default(1)
+  gridSpanY       Int              @default(1)
+  sortOrder       Int              @default(0)
+  configJson      Json?
+  isEnabled       Boolean          @default(true)
+
+  analyticsEvents AnalyticsEvent[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([profileId, sortOrder])
+}
+
+model OAuthConnection {
+  id                     String        @id @default(cuid())
+  userId                 String
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider               OAuthProvider
+  providerAccountId      String        // YouTube Channel ID, Twitch Broadcaster ID, Discord User ID
+  
+  // AES-256-GCM encrypted tokens
+  accessTokenEncrypted   String        @db.Text
+  refreshTokenEncrypted  String?       @db.Text
+  expiresAt              DateTime?
+  scope                  String?
+  
+  // Webhook registration ID
+  webhookSubscriptionId  String?
+
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  @@unique([userId, provider])
+  @@index([providerAccountId])
+}
+
+model DonationTransaction {
+  id               String       @id @default(cuid())
+  profileId        String
+  profile          Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  // SePay Webhook Payload Fields
+  sepayId          Int?         @unique // SePay internal transaction ID
+  gateway          String?      // e.g. "MBBank", "TPBank"
+  accountNumber    String?      // Receiving bank account number
+  amount           Float        // Donated amount (e.g. 50000)
+  currency         String       @default("VND")
+  transactionContent String?    @db.Text // Full bank transfer remark
+  referenceNumber  String?      // Bank transfer FT/Ref code
+  
+  // Extracted Donor Data
+  code             String?      // Unique donation session code (e.g. "LH_89234")
+  donorName        String?      // Extracted from remark or form input
+  donorMessage     String?      @db.Text
+  
+  status           String       @default("SUCCESS") // "PENDING" | "SUCCESS" | "FAILED"
+  transactionDate  DateTime     @default(now())
+  createdAt        DateTime     @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([code])
+}
+
+model AnalyticsEvent {
+  id         String             @id @default(cuid())
+  profileId  String
+  profile    Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  widgetId   String?
+  widget     BentoWidget?       @relation(fields: [widgetId], references: [id], onDelete: SetNull)
+  eventType  AnalyticsEventType
+  referrer   String?
+  deviceType String?
+  country    String?
+  createdAt  DateTime           @default(now())
+
+  @@index([profileId, createdAt])
+  @@index([profileId, eventType])
+}
