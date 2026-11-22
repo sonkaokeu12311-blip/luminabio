@@ -6,6 +6,7 @@ import { MessageSquare, Tv, Youtube, Lock, Mail, ArrowRight, Sparkles } from "lu
 import { DiscordAuthButton } from "@/components/auth/discord-auth-button";
 import { TwitchAuthButton } from "@/components/auth/twitch-auth-button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+import { GitHubAuthButton } from "@/components/auth/github-auth-button";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -37,6 +38,9 @@ export default function LoginPage() {
 
         {/* OAuth2 Login Providers */}
         <div className="flex flex-col gap-3">
+          {/* GitHub Login Button */}
+          <GitHubAuthButton />
+
           {/* Discord Login Button */}
           <DiscordAuthButton />
 

@@ -30,6 +30,7 @@ import {
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { TwitchAuthButton } from "@/components/auth/twitch-auth-button";
 import { DiscordAuthButton } from "@/components/auth/discord-auth-button";
+import { GitHubAuthButton } from "@/components/auth/github-auth-button";
 import { LiveBanner } from "@/components/bio/live-banner";
 import { WidgetCard, BentoWidgetData } from "@/components/bio/widget-card";
 import { AudioWaveformPlayer } from "@/components/bio/audio-player";
@@ -461,6 +462,18 @@ export default function BioBuilderDashboard() {
                   userId={profile.userId}
                   isConnected={true}
                   username="alexander#0001"
+                />
+              </div>
+
+              {/* GitHub Card */}
+              <div className="p-4 rounded-2xl bg-surface border border-white/10 flex flex-col gap-2">
+                <div className="text-xs font-bold text-zinc-200 flex items-center justify-between">
+                  <span>GitHub Developer Profile</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">Open Source & Repos</span>
+                </div>
+                <GitHubAuthButton
+                  userId={profile.userId}
+                  isConnected={false}
                 />
               </div>
             </div>
