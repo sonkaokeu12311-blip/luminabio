@@ -1,0 +1,56 @@
+{
+  "users": [
+    {
+      "id": "usr_1795505636093_97evj",
+      "username": "creator_pro",
+      "email": "creator_pro@gmail.com",
+      "passwordHash": "17753076d15f2559353566d22171c407:c1955e29090778b6913e53b2312c3f1d12eb511b718042958df0eda67ce15c4d6c166fce6ab3ccfcdda736ddce3ae0e9ac56614d60496b46e6c963f52868312c",
+      "role": "CREATOR",
+      "createdAt": "2026-11-24T07:33:56.093Z",
+      "profile": {
+        "id": "prof_usr_1795505636093_97evj",
+        "userId": "usr_1795505636093_97evj",
+        "displayName": "CREATOR_PRO",
+        "bio": "Chào mừng bạn đến với trang Bio cá nhân của tôi!",
+        "avatarUrl": "",
+        "accentColor": "#6366f1",
+        "backgroundType": "GRADIENT",
+        "backgroundUrl": "",
+        "audioUrl": "",
+        "audioTitle": "Soundtrack Flow",
+        "isLive": false,
+        "livePlatform": "NONE",
+        "sepayBank": "MBBank",
+        "sepayAccountNumber": "03810002009",
+        "sepayAccountName": "BUI VAN THU NOOB",
+        "widgets": [
+          {
+            "id": "w-1795505636093-1",
+            "type": "LIVE_STREAM",
+            "title": "🔴 LIVE STREAM BROADCAST",
+            "gridSpanX": 2,
+            "gridSpanY": 2,
+            "sortOrder": 0,
+            "isEnabled": true,
+            "configJson": {}
+          },
+          {
+            "id": "w-1795505636093-2",
+            "type": "TIP_JAR",
+            "title": "Donate Ủng Hộ Stream",
+            "gridSpanX": 2,
+            "gridSpanY": 1,
+            "sortOrder": 1,
+            "isEnabled": true,
+            "configJson": {
+              "donationGoal": 1000000,
+              "currentAmount": 0,
+              "currency": "VND",
+              "qrCodeUrl": "https://qr.sepay.vn/img?acc=03810002009&bank=MBBank&amount=50000"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

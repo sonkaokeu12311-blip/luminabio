@@ -1,6 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, isDatabaseOnline, withDbTimeout } from "@/lib/prisma";
+import { findLocalUserByIdentifier } from "@/lib/local-db";
 import { checkYouTubeLiveStatus } from "@/lib/youtube";
 import { getTwitchStreamState } from "@/lib/twitch";
 import { BackgroundFx } from "@/components/bio/background-fx";
@@ -17,25 +18,37 @@ interface PageProps {
 export default async function PublicBioPage({ params }: PageProps) {
   const { username } = params;
 
-  // 1. Fetch user & bio profile from Database
+  // 1. Fetch user & bio profile from Database (Prisma hoặc Local DB)
   let user: any = null;
-  try {
-    user = await prisma.user.findUnique({
-      where: { username },
-      include: {
-        profile: {
+  const isOnline = await isDatabaseOnline();
+
+  if (isOnline) {
+    try {
+      user = await withDbTimeout(
+        prisma.user.findUnique({
+          where: { username },
           include: {
-            widgets: {
-              where: { isEnabled: true },
-              orderBy: { sortOrder: "asc" },
+            profile: {
+              include: {
+                widgets: {
+                  where: { isEnabled: true },
+                  orderBy: { sortOrder: "asc" },
+                },
+              },
             },
+            oauthConnections: true,
           },
-        },
-        oauthConnections: true,
-      },
-    });
-  } catch (dbErr) {
-    console.warn("[Database fetch fallback]:", dbErr);
+        }),
+        800
+      );
+    } catch (dbErr) {
+      console.warn("[Database fetch fallback]:", dbErr);
+    }
+  }
+
+  // Fallback sang Local DB
+  if (!user) {
+    user = findLocalUserByIdentifier(username);
   }
 
   // 2. Demo Creator Fallback for previewing without prior DB seed
@@ -46,9 +59,8 @@ export default async function PublicBioPage({ params }: PageProps) {
         username: username,
         profile: {
           displayName: `${username.toUpperCase()} ★ LIVE`,
-          bio: "Full-Stack Dev & Streamer | Building cool stuff with Next.js & Twitch Helix ⚡",
-          avatarUrl:
-            "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=300&h=300&fit=crop",
+          bio: "Full-Stack Dev & Streamer | Tự do tùy biến giao diện Bento & kết nối Livestream ⚡",
+          avatarUrl: "", // Trống mặc định, hiển thị avatar ký tự hoặc người dùng tự thiết kế
           accentColor: "#6366f1",
           backgroundType: "GRADIENT",
           audioUrl:

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   Radio,
   Palette,
@@ -26,6 +27,11 @@ import {
   Check,
   Zap,
   SlidersHorizontal,
+  User,
+  LogIn,
+  LogOut,
+  Lock,
+  ArrowRight,
 } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { TwitchAuthButton } from "@/components/auth/twitch-auth-button";
@@ -36,37 +42,46 @@ import { WidgetCard, BentoWidgetData } from "@/components/bio/widget-card";
 import { AudioWaveformPlayer } from "@/components/bio/audio-player";
 import { BackgroundFx } from "@/components/bio/background-fx";
 
-type ActiveModal = "none" | "live" | "widgets" | "theme" | "monetization" | "obs" | "share";
+type ActiveModal =
+  | "none"
+  | "live"
+  | "widgets"
+  | "theme"
+  | "monetization"
+  | "obs"
+  | "share"
+  | "account";
 
 export default function BioBuilderDashboard() {
   const [activeModal, setActiveModal] = useState<ActiveModal>("none");
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("mobile");
   const [isSaved, setIsSaved] = useState(false);
   const [copiedObs, setCopiedObs] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Editor Profile State
   const [profile, setProfile] = useState({
     userId: "user-creator-123",
-    username: "shroud_code",
-    displayName: "ALEXANDER // LIVE",
-    bio: "Full-Stack Software Architect & Streamer | Exploring Next.js, Rust & Cyberpunk Beats ⚡",
-    avatarUrl:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop",
+    username: "your_handle",
+    displayName: "Your Name",
+    bio: "Thiết kế trang Bio cá nhân, kết nối Livestream & nhận Donate VietQR tại đây.",
+    avatarUrl: "", // Để trống mặc định, người dùng tự upload hoặc thiết kế
     accentColor: "#6366f1",
     backgroundType: "GRADIENT" as "COLOR" | "GRADIENT" | "IMAGE" | "VIDEO" | "PARTICLES",
     backgroundUrl: "",
-    audioUrl: "https://cdn.freesound.org/previews/612/612610_5674468-lq.mp3",
-    audioTitle: "Midnight Cyber Synth - Ambient Flow",
-    isLive: true,
-    livePlatform: "YOUTUBE" as "NONE" | "YOUTUBE" | "TWITCH",
+    audioUrl: "",
+    audioTitle: "Cyber Ambient - Chill Lofi",
+    isLive: false,
+    livePlatform: "NONE" as "NONE" | "YOUTUBE" | "TWITCH",
     sepayBank: "MBBank",
     sepayAccountNumber: "03810002009",
     sepayAccountName: "BUI VAN THU NOOB",
     liveDataJson: {
-      title: "🔴 Building a Guns.lol + Bento.me Clone with YouTube & Twitch APIs!",
-      viewerCount: 2840,
-      gameName: "Software & Game Dev",
-      embedUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0",
+      title: "Chưa có phát sóng trực tiếp",
+      viewerCount: 0,
+      gameName: "Gaming & IRL",
+      embedUrl: "",
     },
   });
 
@@ -146,8 +161,76 @@ export default function BioBuilderDashboard() {
     },
   ]);
 
-  const handleSave = () => {
+  // Tự động tải profile của tài khoản đã đăng nhập
+  React.useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.success && data.user) {
+          setCurrentUser(data.user);
+          const p = data.user.profile;
+          if (p) {
+            setProfile((prev) => ({
+              ...prev,
+              userId: data.user.id,
+              username: data.user.username,
+              displayName: p.displayName || data.user.username,
+              bio: p.bio || "",
+              avatarUrl: p.avatarUrl || "",
+              accentColor: p.accentColor || "#6366f1",
+              backgroundType: p.backgroundType || "GRADIENT",
+              backgroundUrl: p.backgroundUrl || "",
+              audioUrl: p.audioUrl || "",
+              audioTitle: p.audioTitle || prev.audioTitle,
+              isLive: p.isLive || false,
+              livePlatform: p.livePlatform || "NONE",
+              sepayBank: p.sepayBank || "MBBank",
+              sepayAccountNumber: p.sepayAccountNumber || prev.sepayAccountNumber,
+              sepayAccountName: p.sepayAccountName || prev.sepayAccountName,
+            }));
+            if (p.widgets && p.widgets.length > 0) {
+              setWidgets(p.widgets);
+            }
+          }
+        } else {
+          setCurrentUser(null);
+        }
+      })
+      .catch((err) => {
+        console.warn("Lỗi kiểm tra session:", err);
+        setCurrentUser(null);
+      })
+      .finally(() => {
+        setIsAuthLoading(false);
+      });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setCurrentUser(null);
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSave = async () => {
     setIsSaved(true);
+    try {
+      if (currentUser) {
+        await fetch("/api/profile/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile,
+            widgets,
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Lỗi khi lưu profile:", err);
+    }
     setTimeout(() => setIsSaved(false), 2500);
   };
 
@@ -187,24 +270,29 @@ export default function BioBuilderDashboard() {
 
       {/* TOP FLOATING NAVIGATION HUD */}
       <header className="h-16 px-6 flex items-center justify-between border-b border-white/[0.08] bg-zinc-950/70 backdrop-blur-2xl sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center font-black text-white text-base shadow-glow-accent">
+        <Link
+          href="/"
+          className="flex items-center gap-3 group hover:opacity-95 transition-all"
+          title="Nhấn để trở về Trang Chủ LiveHub"
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center font-black text-white text-base shadow-glow-accent group-hover:scale-105 transition-transform">
             L
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm tracking-wide text-white">
+              <span className="font-extrabold text-sm tracking-wide text-white group-hover:text-indigo-400 transition-colors">
                 LIVEHUB STUDIO
               </span>
               <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/25 px-2 py-0.5 rounded-full font-mono uppercase font-bold">
                 HUD v2.0
               </span>
             </div>
-            <div className="text-[11px] text-zinc-400 font-mono">
-              livehub.me/{profile.username}
+            <div className="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5 group-hover:text-zinc-200 transition-colors">
+              <span>livehub.me/{profile.username}</span>
+              <span className="text-[10px] text-zinc-500 font-sans">&larr; Về trang chủ</span>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Center Quick View Mode Toggle */}
         <div className="hidden md:flex items-center gap-1 bg-surface/90 border border-white/10 p-1 rounded-xl shadow-glass">
@@ -268,6 +356,16 @@ export default function BioBuilderDashboard() {
             <ExternalLink className="w-4 h-4" />
           </a>
 
+          {/* Account / Login Button */}
+          <button
+            onClick={() => setActiveModal("account")}
+            className="px-3 py-2 rounded-xl bg-surface hover:bg-surface-hover border border-white/10 hover:border-white/20 text-xs font-semibold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shadow-glass"
+            title="Tài khoản & Đăng nhập"
+          >
+            <User className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Tài khoản</span>
+          </button>
+
           {/* Save / Publish */}
           <button
             onClick={handleSave}
@@ -320,6 +418,7 @@ export default function BioBuilderDashboard() {
               streamTitle={profile.liveDataJson?.title}
               viewerCount={profile.liveDataJson?.viewerCount}
               gameName={profile.liveDataJson?.gameName}
+              onClickAvatar={() => setActiveModal("theme")}
             />
 
             {profile.bio && (
@@ -590,6 +689,66 @@ export default function BioBuilderDashboard() {
             </div>
 
             <div className="flex flex-col gap-3">
+              {/* Avatar Upload / URL */}
+              <div className="flex flex-col gap-2 p-3 rounded-2xl bg-zinc-900/60 border border-white/10">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-300">
+                    Ảnh Đại Diện (Tự thiết kế / Để trống)
+                  </label>
+                  {profile.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setProfile({ ...profile, avatarUrl: "" })}
+                      className="text-[11px] text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      Xóa ảnh (để avatar chữ)
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    {profile.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-extrabold text-white text-lg">
+                        {profile.displayName ? profile.displayName.charAt(0).toUpperCase() : "?"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Dán link ảnh (https://...)"
+                      value={profile.avatarUrl}
+                      onChange={(e) => setProfile({ ...profile, avatarUrl: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-lg bg-surface border border-white/10 text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    />
+                    <label className="text-[11px] text-indigo-400 hover:text-indigo-300 cursor-pointer flex items-center gap-1 font-medium w-fit">
+                      <span>📁 Tải ảnh từ máy tính &rarr;</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              if (event.target?.result) {
+                                setProfile({ ...profile, avatarUrl: event.target.result as string });
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-zinc-300">Tên Hiển Thị (Display Name)</label>
                 <input
@@ -753,6 +912,129 @@ export default function BioBuilderDashboard() {
                 <span>3. Dán link trên vào ô URL (đặt kích thước 1920x1080)</span>
                 <span>4. Khi SePay có tiền vào, OBS sẽ tự động nổ pop-up chúc mừng kèm âm thanh!</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. ACCOUNT & LOGIN MODAL (Popup Quản Lý Tài Khoản & Đăng Nhập) */}
+      {/* ========================================================================= */}
+      {activeModal === "account" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl flex flex-col gap-4 relative animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">
+                    {currentUser ? "Thông Tin Tài Khoản" : "Tài Khoản & Đăng Nhập"}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    {currentUser
+                      ? "Đang quản lý trang Bio độc quyền"
+                      : "Đăng ký hoặc đăng nhập để lưu vĩnh viễn trang Bio"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveModal("none")}
+                className="p-1.5 rounded-full bg-zinc-900 text-zinc-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {currentUser ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-zinc-900/80 border border-white/10">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-black text-white text-lg border border-white/20">
+                    {currentUser.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="font-bold text-sm text-white truncate">
+                      @{currentUser.username}
+                    </div>
+                    <div className="text-xs text-zinc-400 truncate">
+                      {currentUser.email}
+                    </div>
+                    <a
+                      href={`/${currentUser.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 font-mono mt-0.5 inline-block"
+                    >
+                      livehub.me/{currentUser.username} &rarr;
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-xs text-zinc-500">Trạng thái: Đã đăng nhập</span>
+                  <button
+                    onClick={handleLogout}
+                    className="px-3.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-500/30 text-red-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/25 text-xs text-zinc-300 leading-relaxed">
+                  Bạn đang ở chế độ <strong>Khách thử nghiệm</strong>. Hãy tạo tài khoản với <strong>Tên đăng nhập, Email, Mật khẩu & Captcha</strong> để sở hữu đường link <code className="text-indigo-300 font-mono">livehub.me/ten_cua_ban</code> vĩnh viễn!
+                </div>
+
+                <Link
+                  href="/auth/login"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950 transition-all hover:scale-[1.01]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Mở Cổng Đăng Ký / Đăng Nhập (Có Captcha)</span>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 8. AUTH REQUIRED GATE - Chặn truy cập nếu chưa đăng nhập */}
+      {/* ========================================================================= */}
+      {!isAuthLoading && !currentUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
+          <div className="w-full max-w-md rounded-3xl bg-zinc-950 border border-white/15 p-8 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col items-center text-center gap-5 relative animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+              <Lock className="w-7 h-7" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight">
+                Yêu Cầu Đăng Nhập Tài Khoản
+              </h2>
+              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                Bạn chưa đăng nhập. Để tạo và lưu trữ trang Bio cá nhân độc quyền, cấu hình tài khoản nhận tiền donate VietQR và đồng bộ Livestream, vui lòng tạo tài khoản hoặc đăng nhập.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 w-full mt-2">
+              <Link
+                href="/auth/login"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-950 transition-all hover:scale-[1.02]"
+              >
+                <span>Tạo Tài Khoản / Đăng Nhập Ngay</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/"
+                className="w-full py-3 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all"
+              >
+                &larr; Về Trang Chủ LiveHub
+              </Link>
             </div>
           </div>
         </div>
